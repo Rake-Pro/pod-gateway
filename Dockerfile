@@ -20,7 +20,7 @@ COPY config /config
 COPY --chmod=0755 bin /bin
 
 # Runs as root by design: the gateway and the injected client containers
-# manage routes, VXLAN links, iptables and dnsmasq DHCP (see docs/inhouse-plan.md
+# manage routes, VXLAN links, iptables and dnsmasq DHCP (see README.md
 # for the exact capabilities each container needs).
 # Upstream CMD pointed at a non-existent /bin/entry.sh; the chart always sets
 # the command, so default to the gateway sidecar.

@@ -16,7 +16,6 @@ remote. All credit for the gateway design and scripts goes to the upstream proje
 | `Dockerfile` | alpine 3.24.2 (digest pinned) + `apk upgrade`, explicit `iptables`, `COPY --chmod=0755 bin`, CMD fixed (upstream pointed at a non-existent `/bin/entry.sh`) |
 | CI | Rake-Pro fleet workflows: CI build + shellcheck, release on main push / v* tag to `ghcr.io/rake-pro/pod-gateway`, Trivy CRITICAL gate, weekly Trivy rescan, Dependabot (docker, actions); upstream workflows and Renovate config moved to `.github/upstream-disabled/` |
 
-- Plan, security review and cutover runbook: [docs/inhouse-plan.md](docs/inhouse-plan.md)
 - `dev` = default branch, `main` = release branch (promotion PR dev -> main, merge commit only)
 - semver tags `vX.Y.Z` only; the fork line starts at `v2.0.0`, above upstream's last tag `v1.13.0`
 - never push upstream tags to origin (`remote.upstream.tagOpt --no-tags` is set locally)

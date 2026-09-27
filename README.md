@@ -20,24 +20,47 @@ remote. All credit for the gateway design and scripts goes to the upstream proje
 - semver tags `vX.Y.Z` only; the fork line starts at `v2.0.0`, above upstream's last tag `v1.13.0`
 - never push upstream tags to origin (`remote.upstream.tagOpt --no-tags` is set locally)
 
+*Using this image with the upstream Helm chart*
+
+There is no separate chart in this repo. Deploy with angelnu's `pod-gateway` chart and point it at
+this fork's image:
+
+```bash
+helm repo add angelnu https://angelnu.github.io/helm-charts
+```
+
+```yaml
+# values.yaml
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          repository: ghcr.io/rake-pro/pod-gateway
+          tag: "v2.x.x" # pin to a released tag of this fork
+```
+
+See [gateway-admission-controller](https://github.com/Rake-Pro/gateway-admission-controller) for the
+matching override for the webhook image.
+
 ---
 
 # pod-gateway
 
-This container includes scripts used to route trafic from pods through another gateway pod. Typically
-the gateway pod then runs a openvpn client to forward the traffic.
+This container includes scripts used to route traffic from pods through another gateway pod. Typically
+the gateway pod then runs an openvpn client to forward the traffic.
 
-This container is injected by the [gateway-admision-controller](../../../gateway-admision-controller)
-so that existing K8S PODs can be extended to route their trafic through a VPN. Check the
-[README](../../../gateway-admision-controller/blob/main/README.md) to learn how to use it.
+This container is injected by the
+[gateway-admission-controller](https://github.com/Rake-Pro/gateway-admission-controller) so that
+existing K8S PODs can be extended to route their traffic through a VPN. Check its
+[README](https://github.com/Rake-Pro/gateway-admission-controller/blob/main/README.md) to learn how
+to use it.
 
-The connection between the pods is done via a vxlan. The gatway provides a DHCP server to let client
-pods to get automatically an IP.
+The connection between the pods is done via a vxlan. The gateway provides a DHCP server to let client
+pods get automatically an IP.
 
-Ougoing traffic is masqueraded (SNAT). It is also possible to define port forwardind so ports of client
-pods can be reached from the outside.
-
-The [.github](.github) folder will get PRs from this template so you can apply the latest workflows.
+Outgoing traffic is masqueraded (SNAT). It is also possible to define port forwarding so ports of
+client pods can be reached from the outside.
 
 ## Design
 
@@ -53,21 +76,14 @@ This container provides the required init/sidecar containers for clients and gat
      working. Reset the vxlan if this is not the case. This happens, for example, when the gateway POD
      is restarted and it gets a new IP from K8S.
 - gateway POD:
-   - [gateway_init.sh](bin/gateway_init.sh): creates the VXLAN tunnel and set traffic forwading rules.
+   - [gateway_init.sh](bin/gateway_init.sh): creates the VXLAN tunnel and set traffic forwarding rules.
      Optionally, if a VPN is used in the gateway, blocks non VPN outbound traffic.
    - [gateway_sidecar.sh](bin/gateway_sidecar.sh): deploys a DHCP and DNS server
 
 Settings are expected in the `/config` folder - see examples under [config](config):
 - [config/settings.sh](config/settings.sh): variables used by all helper scripts
 - [config/nat.conf](config/nat.conf): static IP and nat rules for PODs exposing ports through the gateway (and optional VPN) POD
-Default settings might be overwritten by attachin a container volume with the new values to the helper pods.
-
-## Prereqs
-
-You need to create the following secrets (not needed within the k8s-at-home org - there we use org-wide secrets):
-- WORKFLOW_REPO_SYNC_TOKEN # Needed to do PRs that update the workflows
-- GHCR_USERNAME # Needed to upload container to the Github Container Registry
-- GHCR_TOKEN # Needed to upload container to the Github Container Registry
+Default settings might be overwritten by attaching a container volume with the new values to the helper pods.
 
 ## How to build
 
@@ -76,7 +92,8 @@ You need to create the following secrets (not needed within the k8s-at-home org 
    make
    ```
 
-Testing requires multiple containers - see the [gateway-admision-controller](../../../gateway-admision-controller)
-and check the [Makefile](Makefile) for other build targets.
+Testing requires multiple containers - see
+[gateway-admission-controller](https://github.com/Rake-Pro/gateway-admission-controller) and check
+the [Makefile](Makefile) for other build targets.
 
 

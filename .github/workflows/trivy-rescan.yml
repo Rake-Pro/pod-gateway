@@ -6,7 +6,7 @@ name: Trivy rescan
 # emails the failure. Does not build or push anything.
 on:
   schedule:
-    - cron: '5 5 * * 1'
+    - cron: '15 5 * * 1'
   workflow_dispatch: {}
 
 permissions:

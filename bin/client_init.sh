@@ -50,7 +50,20 @@ echo $HOSTNAME_REAL
 
 # Derived settings
 K8S_DNS_IP="$(cut -d ' ' -f 1 <<< "$K8S_DNS_IPS")"
-GATEWAY_IP="$(dig +short "$GATEWAY_NAME" "@${K8S_DNS_IP}")"
+# Resolve the gateway pod IP. dig can print ";; communications error ... timed
+# out" to stdout before the answer, so keep only a bare IPv4 line and retry;
+# an empty result fails the init loudly instead of routing to garbage.
+GATEWAY_IP=""
+for _try in 1 2 3 4 5; do
+  GATEWAY_IP="$(dig +short +time=2 +tries=2 "$GATEWAY_NAME" "@${K8S_DNS_IP}" 2>/dev/null \
+    | grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}$' | tail -n 1 || true)"
+  [[ -n "$GATEWAY_IP" ]] && break
+  sleep 1
+done
+if [[ -z "$GATEWAY_IP" ]]; then
+  echo "Could not resolve gateway ${GATEWAY_NAME} via ${K8S_DNS_IP}"
+  exit 1
+fi
 NAT_ENTRY="$(grep "^$HOSTNAME_REAL " /config/nat.conf || true)"
 VXLAN_GATEWAY_IP="${VXLAN_IP_NETWORK}.1"
 
@@ -75,7 +88,7 @@ if [[ -n "$VPN_INTERFACE_MTU" ]]; then
   ETH0_INTERFACE_MTU=$(cat /sys/class/net/eth0/mtu)
   VXLAN0_INTERFACE_MAX_MTU=$((ETH0_INTERFACE_MTU-50))
   #Ex: if tun0 = 1500 and max mtu is 1450
-  if [ ${VPN_INTERFACE_MTU} >= ${VXLAN0_INTERFACE_MAX_MTU} ];then
+  if [ "${VPN_INTERFACE_MTU}" -ge "${VXLAN0_INTERFACE_MAX_MTU}" ]; then
     ip link set mtu "${VXLAN0_INTERFACE_MAX_MTU}" dev vxlan0
   #Ex: if wg0 = 1420 and max mtu is 1450
   else

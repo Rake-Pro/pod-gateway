@@ -47,7 +47,7 @@ CONNECTION_RETRY_COUNT=1
 # you want to disable DNSSEC with the gateway then set this to false
 GATEWAY_ENABLE_DNSSEC=true
 
-# If you use nftables for iptables you need to set this to yes
+# Kept for compatibility; no effect (the image iptables is nft-backed)
 IPTABLES_NFT=no
 
 # Set to WAN/VPN IP to enable SNAT instead of Masquerading

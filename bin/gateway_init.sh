@@ -8,10 +8,13 @@ cat /default_config/settings.sh
 cat /config/settings.sh
 . /config/settings.sh
 
-if [ "${IPTABLES_NFT:-no}" = "yes" ];then
-    # We cannot just call iptables-translate as it'll just print new syntax without applying
-    rm /sbin/iptables
-    ln -s /sbin/iptables-translate /sbin/iptables
+# The alpine iptables package is nft-backed (/usr/sbin/iptables ->
+# xtables-nft-multi), so IPTABLES_NFT needs no action. Upstream swapped
+# iptables for iptables-translate here, which only PRINTS rules: with
+# IPTABLES_NFT=yes the kill switch below was silently never installed (and
+# rm /sbin/iptables fails on current alpine, where it lives in /usr/sbin).
+if [ "${IPTABLES_NFT:-no}" = "yes" ]; then
+    echo "IPTABLES_NFT=yes: iptables is already nft-backed in this image; nothing to do"
 fi
 
 # It might already exists in case initContainer is restarted
@@ -34,7 +37,7 @@ if [[ -n "$VPN_INTERFACE_MTU" ]]; then
   ETH0_INTERFACE_MTU=$(cat /sys/class/net/eth0/mtu)
   VXLAN0_INTERFACE_MAX_MTU=$((ETH0_INTERFACE_MTU-50))
   #Ex: if tun0 = 1500 and max mtu is 1450
-  if [ ${VPN_INTERFACE_MTU} >= ${VXLAN0_INTERFACE_MAX_MTU} ];then
+  if [ "${VPN_INTERFACE_MTU}" -ge "${VXLAN0_INTERFACE_MAX_MTU}" ]; then
     ip link set mtu "${VXLAN0_INTERFACE_MAX_MTU}" dev vxlan0
   #Ex: if wg0 = 1420 and max mtu is 1450
   else
@@ -121,6 +124,14 @@ if [[ -n "$VPN_INTERFACE" ]]; then
     # Allow output for VPN and VXLAN
     iptables -A OUTPUT -o "$VPN_INTERFACE" -j ACCEPT
     iptables -A OUTPUT -o vxlan0 -j ACCEPT
+  fi
+
+  # Fail the init if the kill switch did not land (the pod then never starts
+  # and clients cannot route, which is the safe outcome).
+  if [[ $VPN_BLOCK_OTHER_TRAFFIC == true ]]; then
+    iptables -S FORWARD | grep -qx -- '-P FORWARD DROP' || { echo "kill switch: FORWARD policy is not DROP"; exit 1; }
+    iptables -S OUTPUT | grep -qx -- '-P OUTPUT DROP' || { echo "kill switch: OUTPUT policy is not DROP"; exit 1; }
+    echo "kill switch verified (FORWARD and OUTPUT policy DROP)"
   fi
 
   #Routes for local networks

@@ -54,7 +54,7 @@ jobs:
           else
             labels=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
               --jq '[.[].labels[].name] | join(",")' || echo "")
-            bump=patch
+            bump="patch"
             case ",${labels}," in
               *,release:major,*) bump=major ;;
               *,release:minor,*) bump=minor ;;

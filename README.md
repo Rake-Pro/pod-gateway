@@ -1,3 +1,28 @@
+# pod-gateway (Rake-Pro fork)
+
+In-house fork of [angelnu/pod-gateway](https://github.com/angelnu/pod-gateway) by angelnu, licensed
+Apache-2.0 (see [LICENSE](LICENSE)). Full upstream history is kept; upstream is the `upstream` git
+remote. All credit for the gateway design and scripts goes to the upstream project.
+
+*Fork changes (modified files, per Apache-2.0 section 4(b))*
+
+| File | Change |
+|---|---|
+| `bin/client_init.sh` | gateway IP resolution keeps only a bare IPv4 line from `dig`, retries 5x, fails loudly when empty (upstream routed to garbage when dig printed a timeout warning to stdout) |
+| `bin/client_init.sh`, `bin/gateway_init.sh` | MTU comparison `[ a >= b ]` (a redirect, always false) fixed to `-ge` |
+| `bin/gateway_init.sh` | `IPTABLES_NFT=yes` no longer swaps iptables for `iptables-translate` (which only prints rules, so the kill switch was never installed); image iptables is nft-backed already |
+| `bin/gateway_init.sh` | kill switch self-check: with `VPN_BLOCK_OTHER_TRAFFIC=true` the init fails unless FORWARD and OUTPUT policies are DROP |
+| `config/settings.sh` | `IPTABLES_NFT` comment updated (no effect) |
+| `Dockerfile` | alpine 3.24.2 (digest pinned) + `apk upgrade`, explicit `iptables`, `COPY --chmod=0755 bin`, CMD fixed (upstream pointed at a non-existent `/bin/entry.sh`) |
+| CI | Rake-Pro fleet workflows: CI build + shellcheck, release on main push / v* tag to `ghcr.io/rake-pro/pod-gateway`, Trivy CRITICAL gate, weekly Trivy rescan, Dependabot (docker, actions); upstream workflows and Renovate config moved to `.github/upstream-disabled/` |
+
+- Plan, security review and cutover runbook: [docs/inhouse-plan.md](docs/inhouse-plan.md)
+- `dev` = default branch, `main` = release branch (promotion PR dev -> main, merge commit only)
+- semver tags `vX.Y.Z` only; the fork line starts at `v2.0.0`, above upstream's last tag `v1.13.0`
+- never push upstream tags to origin (`remote.upstream.tagOpt --no-tags` is set locally)
+
+---
+
 # pod-gateway
 
 This container includes scripts used to route trafic from pods through another gateway pod. Typically
